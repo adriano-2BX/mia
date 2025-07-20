@@ -398,24 +398,26 @@
                                     <Input label="Previsão de Entrega" name="emp_previsao" type="date" value={formData.emp_previsao} onChange={handleChange} />
                                 </div>
                             </fieldset>
-                            <fieldset className="border p-4 rounded-lg"><legend className="px-2 font-semibold text-slate-700">Arquivos</legend>
-                                {formData.arquivos.map((file, index) => (
-                                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end border-b pb-4 mb-4">
-                                        <Select label="Tipo" name="tipo" value={file.tipo} onChange={(e) => handleFileChange(index, e)}>
-                                            <option value="imagem_fachada">Imagem (Fachada)</option>
-                                            <option value="imagem_interna">Imagem (Interna)</option>
-                                            <option value="planta">Planta</option>
-                                            <option value="video">Vídeo</option>
-                                            <option value="tour_360">Tour 360</option>
-                                        </Select>
-                                        <div className="md:col-span-2 grid grid-cols-3 gap-2">
-                                          <div className="col-span-2"><Input label="Link do Arquivo" name="link_arquivo" value={file.link_arquivo} onChange={(e) => handleFileChange(index, e)} /></div>
-                                          <Button variant="danger" onClick={() => removeFile(index)} className="self-end"><TrashIcon /></Button>
+                            {empreendimento && (
+                                <fieldset className="border p-4 rounded-lg"><legend className="px-2 font-semibold text-slate-700">Arquivos</legend>
+                                    {formData.arquivos.map((file, index) => (
+                                        <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end border-b pb-4 mb-4">
+                                            <Select label="Tipo" name="tipo" value={file.tipo} onChange={(e) => handleFileChange(index, e)}>
+                                                <option value="imagem_fachada">Imagem (Fachada)</option>
+                                                <option value="imagem_interna">Imagem (Interna)</option>
+                                                <option value="planta">Planta</option>
+                                                <option value="video">Vídeo</option>
+                                                <option value="tour_360">Tour 360</option>
+                                            </Select>
+                                            <div className="md:col-span-2 grid grid-cols-3 gap-2">
+                                              <div className="col-span-2"><Input label="Link do Arquivo" name="link_arquivo" value={file.link_arquivo} onChange={(e) => handleFileChange(index, e)} /></div>
+                                              <Button variant="danger" onClick={() => removeFile(index)} className="self-end"><TrashIcon /></Button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                                <Button type="button" variant="secondary" onClick={addFile}>+ Adicionar Arquivo</Button>
-                            </fieldset>
+                                    ))}
+                                    <Button type="button" variant="secondary" onClick={addFile}>+ Adicionar Arquivo</Button>
+                                </fieldset>
+                            )}
                         </div>
                         <div className="flex justify-end gap-4 mt-8">
                             <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
@@ -482,10 +484,17 @@
             
             const handleEmpreendimentoSubmit = async (formData) => {
                 try {
+                    const { arquivos, ...empreendimentoData } = formData;
                     if (empreendimentoForm.data) { // Edit
-                        await api.put(`/api/empreendimentos/${empreendimentoForm.data.id}`, formData);
+                        await api.put(`/api/empreendimentos/${empreendimentoForm.data.id}`, empreendimentoData);
+                        // Lógica para atualizar arquivos (apagar os existentes e criar os novos)
                     } else { // Create
-                        await api.post('/api/empreendimentos/', formData);
+                        const { data: newEmp } = await api.post('/api/empreendimentos/', empreendimentoData);
+                        if (arquivos && arquivos.length > 0) {
+                            for (const arquivo of arquivos) {
+                                await api.post('/api/arquivos/', { ...arquivo, empreendimento_id: newEmp.id });
+                            }
+                        }
                     }
                     setEmpreendimentoForm({ isOpen: false, data: null });
                     fetchWorkspaceData();
